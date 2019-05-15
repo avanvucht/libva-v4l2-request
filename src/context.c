@@ -38,6 +38,7 @@
 #include <sys/mman.h>
 
 #include <linux/videodev2.h>
+#include <h264-ctrls.h>
 
 #include <mpeg2-ctrls.h>
 #include <h264-ctrls.h>
@@ -75,8 +76,8 @@ VAStatus RequestCreateContext(VADriverContextP context, VAConfigID config_id,
 	if (video_format == NULL)
 		return VA_STATUS_ERROR_OPERATION_FAILED;
 
-	output_type = v4l2_type_video_output(video_format->v4l2_mplane);
-	capture_type = v4l2_type_video_capture(video_format->v4l2_mplane);
+	output_type = v4l2_type_video_output(driver_data->mplane);
+	capture_type = v4l2_type_video_capture(driver_data->mplane);
 
 	config_object = CONFIG(driver_data, config_id);
 	if (config_object == NULL) {
@@ -226,8 +227,8 @@ VAStatus RequestDestroyContext(VADriverContextP context, VAContextID context_id)
 	if (video_format == NULL)
 		return VA_STATUS_ERROR_OPERATION_FAILED;
 
-	output_type = v4l2_type_video_output(video_format->v4l2_mplane);
-	capture_type = v4l2_type_video_capture(video_format->v4l2_mplane);
+	output_type = v4l2_type_video_output(driver_data->mplane);
+	capture_type = v4l2_type_video_capture(driver_data->mplane);
 
 	context_object = CONTEXT(driver_data, context_id);
 	if (context_object == NULL)
