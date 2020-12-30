@@ -71,29 +71,32 @@ VAStatus RequestCreateSurfaces2(VADriverContextP context, unsigned int format,
 	if (format != VA_RT_FORMAT_YUV420)
 		return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
 
-	found = v4l2_find_format(driver_data->video_fd,
-				 V4L2_BUF_TYPE_VIDEO_CAPTURE,
-				 V4L2_PIX_FMT_SUNXI_TILED_NV12);
-	if (found)
-		video_format = video_format_find(V4L2_PIX_FMT_SUNXI_TILED_NV12);
+	capture_type = v4l2_type_video_capture(driver_data->mplane);
 
-	found = v4l2_find_format(driver_data->video_fd,
-				 V4L2_BUF_TYPE_VIDEO_CAPTURE,
-				 V4L2_PIX_FMT_NV12);
-	if (found)
-		video_format = video_format_find(V4L2_PIX_FMT_NV12);
+        if (!driver_data->video_format) {
 
-	if (video_format == NULL)
-		return VA_STATUS_ERROR_OPERATION_FAILED;
+		found = v4l2_find_format(driver_data->video_fd, capture_type,
+					 V4L2_PIX_FMT_SUNXI_TILED_NV12);
+		if (found)
+			video_format = video_format_find(V4L2_PIX_FMT_SUNXI_TILED_NV12);
 
-	driver_data->video_format = video_format;
+		found = v4l2_find_format(driver_data->video_fd, capture_type,
+					 V4L2_PIX_FMT_NV12);
+		if (found)
+			video_format = video_format_find(V4L2_PIX_FMT_NV12);
 
-	capture_type = v4l2_type_video_capture(video_format->v4l2_mplane);
+		if (video_format == NULL)
+			return VA_STATUS_ERROR_OPERATION_FAILED;
 
-	rc = v4l2_set_format(driver_data->video_fd, capture_type,
-			     video_format->v4l2_format, width, height);
-	if (rc < 0)
-		return VA_STATUS_ERROR_OPERATION_FAILED;
+		driver_data->video_format = video_format;
+
+		rc = v4l2_set_format(driver_data->video_fd, capture_type,
+				     video_format->v4l2_format, width, height);
+		if (rc < 0)
+			return VA_STATUS_ERROR_OPERATION_FAILED;
+        } else {
+		video_format = driver_data->video_format;
+	}
 
 	rc = v4l2_get_format(driver_data->video_fd, capture_type, &format_width,
 			     &format_height, destination_bytesperlines,
@@ -259,8 +262,8 @@ VAStatus RequestSyncSurface(VADriverContextP context, VASurfaceID surface_id)
 		goto error;
 	}
 
-	output_type = v4l2_type_video_output(video_format->v4l2_mplane);
-	capture_type = v4l2_type_video_capture(video_format->v4l2_mplane);
+	output_type = v4l2_type_video_output(driver_data->mplane);
+	capture_type = v4l2_type_video_capture(driver_data->mplane);
 
 	surface_object = SURFACE(driver_data, surface_id);
 	if (surface_object == NULL) {
@@ -477,7 +480,7 @@ VAStatus RequestExportSurfaceHandle(VADriverContextP context,
 	export_fds_count = surface_object->destination_buffers_count;
 	export_fds = malloc(export_fds_count * sizeof(*export_fds));
 
-	capture_type = v4l2_type_video_capture(video_format->v4l2_mplane);
+	capture_type = v4l2_type_video_capture(driver_data->mplane);
 
 	rc = v4l2_export_buffer(driver_data->video_fd, capture_type,
 				surface_object->destination_index, O_RDONLY,

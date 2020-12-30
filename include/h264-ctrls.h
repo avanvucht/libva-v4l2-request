@@ -11,6 +11,11 @@
 #ifndef _H264_CTRLS_H_
 #define _H264_CTRLS_H_
 
+#include <linux/videodev2.h>
+
+/* Our pixel format isn't stable at the moment */
+#define V4L2_PIX_FMT_H264_SLICE v4l2_fourcc('S', '2', '6', '4') /* H264 parsed slices */
+
 /*
  * This is put insanely high to avoid conflicting with controls that
  * would be added during the phase where those controls are not
@@ -21,13 +26,25 @@
 #define V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX	(V4L2_CID_MPEG_BASE+1002)
 #define V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAMS	(V4L2_CID_MPEG_BASE+1003)
 #define V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAMS	(V4L2_CID_MPEG_BASE+1004)
+#define V4L2_CID_MPEG_VIDEO_H264_DECODE_MODE	(V4L2_CID_MPEG_BASE+1005)
+#define V4L2_CID_MPEG_VIDEO_H264_START_CODE	(V4L2_CID_MPEG_BASE+1006)
 
 /* enum v4l2_ctrl_type type values */
-#define V4L2_CTRL_TYPE_H264_SPS 0x0105
-#define	V4L2_CTRL_TYPE_H264_PPS 0x0106
-#define	V4L2_CTRL_TYPE_H264_SCALING_MATRIX 0x0107
-#define	V4L2_CTRL_TYPE_H264_SLICE_PARAMS 0x0108
-#define	V4L2_CTRL_TYPE_H264_DECODE_PARAMS 0x0109
+#define V4L2_CTRL_TYPE_H264_SPS			0x0110
+#define V4L2_CTRL_TYPE_H264_PPS			0x0111
+#define V4L2_CTRL_TYPE_H264_SCALING_MATRIX	0x0112
+#define V4L2_CTRL_TYPE_H264_SLICE_PARAMS	0x0113
+#define V4L2_CTRL_TYPE_H264_DECODE_PARAMS	0x0114
+
+enum v4l2_mpeg_video_h264_decode_mode {
+	V4L2_MPEG_VIDEO_H264_DECODE_MODE_SLICE_BASED,
+	V4L2_MPEG_VIDEO_H264_DECODE_MODE_FRAME_BASED,
+};
+
+enum v4l2_mpeg_video_h264_start_code {
+	V4L2_MPEG_VIDEO_H264_START_CODE_NONE,
+	V4L2_MPEG_VIDEO_H264_START_CODE_ANNEX_B,
+};
 
 #define V4L2_H264_SPS_CONSTRAINT_SET0_FLAG			0x01
 #define V4L2_H264_SPS_CONSTRAINT_SET1_FLAG			0x02
@@ -94,10 +111,10 @@ struct v4l2_ctrl_h264_scaling_matrix {
 };
 
 struct v4l2_h264_weight_factors {
-	__s8 luma_weight[32];
-	__s8 luma_offset[32];
-	__s8 chroma_weight[32][2];
-	__s8 chroma_offset[32][2];
+	__s16 luma_weight[32];
+	__s16 luma_offset[32];
+	__s16 chroma_weight[32][2];
+	__s16 chroma_offset[32][2];
 };
 
 struct v4l2_h264_pred_weight_table {
@@ -117,9 +134,13 @@ struct v4l2_h264_pred_weight_table {
 #define V4L2_H264_SLICE_FLAG_DIRECT_SPATIAL_MV_PRED	0x04
 #define V4L2_H264_SLICE_FLAG_SP_FOR_SWITCH		0x08
 
-struct v4l2_ctrl_h264_slice_param {
+struct v4l2_ctrl_h264_slice_params {
 	/* Size in bytes, including header */
 	__u32 size;
+
+	/* Offset in bytes to the start of slice in the OUTPUT buffer. */
+	__u32 start_byte_offset;
+
 	/* Offset in bits to slice_data() from the beginning of this slice. */
 	__u32 header_bit_size;
 
@@ -153,7 +174,7 @@ struct v4l2_ctrl_h264_slice_param {
 
 	/*
 	 * Entries on each list are indices into
-	 * v4l2_ctrl_h264_decode_param.dpb[].
+	 * v4l2_ctrl_h264_decode_params.dpb[].
 	 */
 	__u8 ref_pic_list0[32];
 	__u8 ref_pic_list1[32];
@@ -166,7 +187,7 @@ struct v4l2_ctrl_h264_slice_param {
 #define V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM	0x04
 
 struct v4l2_h264_dpb_entry {
-	__u64 timestamp;
+	__u64 reference_ts;
 	__u16 frame_num;
 	__u16 pic_num;
 	/* Note that field is indicated by v4l2_buffer.field */
@@ -175,16 +196,15 @@ struct v4l2_h264_dpb_entry {
 	__u32 flags; /* V4L2_H264_DPB_ENTRY_FLAG_* */
 };
 
-struct v4l2_ctrl_h264_decode_param {
-	__u32 num_slices;
-	__u16 idr_pic_flag;
+#define V4L2_H264_DECODE_PARAM_FLAG_IDR_PIC	0x01
+
+struct v4l2_ctrl_h264_decode_params {
+	struct v4l2_h264_dpb_entry dpb[16];
+	__u16 num_slices;
 	__u16 nal_ref_idc;
-	__u8 ref_pic_list_p0[32];
-	__u8 ref_pic_list_b0[32];
-	__u8 ref_pic_list_b1[32];
 	__s32 top_field_order_cnt;
 	__s32 bottom_field_order_cnt;
-	struct v4l2_h264_dpb_entry dpb[16];
+	__u32 flags; /* V4L2_H264_DECODE_PARAM_FLAG_* */
 };
 
 #endif
