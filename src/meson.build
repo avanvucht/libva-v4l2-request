@@ -77,6 +77,7 @@ cflags = [
 ]
 
 deps = [
+	kernel_headers_dep,
 	libva_dep,
 	libdrm_dep
 ]
@@ -84,7 +85,7 @@ deps = [
 v4l2_request_drv_video = shared_module('v4l2_request_drv_video',
 	name_prefix: '',
 	install: true,
-	install_dir: get_option('libdir') / 'dri',
+	install_dir: join_paths(get_option('libdir'), 'dri'),
 	c_args: cflags,
 	sources: [ sources, headers, autoconf ],
 	include_directories: includes,
